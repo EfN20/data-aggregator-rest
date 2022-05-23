@@ -93,6 +93,7 @@ def collecting_data_in_page(shared_list, base_url, page):
 
 def create_csv_of_all_vacancies_in_area(word_to_find=None, area=159):
     if is_file_older_than_12_hours("output" + "_word_" + str(word_to_find) + "_area_" + str(area) + ".csv"):
+        start_time = time.time()
         url_list_vacancies_in_area = URL_LIST_VACANCIES + "?area=" + str(area) + "&text=" + str(word_to_find)
         if word_to_find is None:
             url_list_vacancies_in_area = URL_LIST_VACANCIES + "?area=" + str(area)
@@ -150,6 +151,7 @@ def create_csv_of_all_vacancies_in_area(word_to_find=None, area=159):
             dict_writer.writeheader()
             dict_writer.writerows(result)
             a_file.close()
+            print("TIME: ", (time.time() - start_time))
     else:
         pass
 
@@ -275,6 +277,24 @@ def search_vacancies_by_skill_sets(skill_sets, area=159, word_to_find=None):
     return vacancies_sorted_by_skill_sets_match
 
 
+def get_paginated_list(item_list, page, items_per_page):
+    if page is None:
+        page = 0
+    if items_per_page is None:
+        items_per_page = 10
+    offset = page * items_per_page
+    total_page = (len(item_list) // items_per_page)
+    if len(item_list) % items_per_page != 0:
+        total_page += 1
+    result = {
+        "data": item_list[offset:offset+items_per_page],
+        "page": page,
+        "totalPage": total_page,
+        "itemsPerPage": items_per_page
+    }
+    return result
+
+
 def top_10_skills(area=159, word_to_find=None):
     df = pd.read_csv("output" + "_word_" + str(word_to_find) + "_area_" + str(area) + ".csv")
     skills_occurrence = {}
@@ -320,7 +340,7 @@ def get_statistics_salary_to_experience(request):
         Response(
             {
                 'status': 'bad request',
-                'message': 'Area and wordToFind did not provided'
+                'message': 'Area / wordToFind were not provided'
             },
             status=status.HTTP_400_BAD_REQUEST
         )
@@ -342,7 +362,7 @@ def get_statistics_salary_to_company(request):
         Response(
             {
                 'status': 'bad request',
-                'message': 'Area / wordToFind did not provided'
+                'message': 'Area / wordToFind were not provided'
             },
             status=status.HTTP_400_BAD_REQUEST
         )
@@ -352,18 +372,31 @@ def get_statistics_salary_to_company(request):
 def get_matched_vacancies_by_skill_set(request):
     area = request.data.get('area')
     word_to_find = request.data.get('wordToFind')
+    page = request.data.get('page')
+    items_per_page = request.data.get('itemsPerPage')
     skill_set = request.data.get('skillSet')
     if area and word_to_find and skill_set:
         create_csv_of_all_vacancies_in_area(word_to_find, area)
         response_data = search_vacancies_by_skill_sets(skill_set, area, word_to_find)
-        return HttpResponse(
-            json.dumps(response_data, ensure_ascii=False, cls=MyEncoder)
+        paginated_result = get_paginated_list(response_data, page, items_per_page)
+
+        data_to_send = {
+            "vacancies": json.loads(json.dumps(paginated_result['data'], ensure_ascii=False, cls=MyEncoder)),
+            "page": paginated_result['page'],
+            "totalPage": paginated_result['totalPage'],
+            "itemsPerPage": paginated_result['itemsPerPage']
+        }
+
+        return Response(
+            data=data_to_send,
+            status=status.HTTP_200_OK,
+            content_type="application/json"
         )
     else:
         Response(
             {
                 'status': 'bad request',
-                'message': 'Area / wordToFind / skillSet did not provided'
+                'message': 'Area / wordToFind / skillSet were not provided'
             },
             status=status.HTTP_400_BAD_REQUEST
         )
@@ -385,7 +418,7 @@ def get_top_10_skill_set(request):
         Response(
             {
                 'status': 'bad request',
-                'message': 'Area / wordToFind did not provided'
+                'message': 'Area / wordToFind were not provided'
             },
             status=status.HTTP_400_BAD_REQUEST
         )
