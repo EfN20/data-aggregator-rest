@@ -53,6 +53,21 @@ class MyEncoder(json.JSONEncoder):
         return o.__dict__
 
 
+class CurrencyConvertor:
+    rates = {}
+
+    def __init__(self, url):
+        data = requests.get(url).json()
+        self.rates = data["rates"]
+
+    def convert(self, from_currency, to_currency, amount):
+        initial_amount = amount
+        if from_currency != 'EUR':
+            amount = amount / self.rates[from_currency]
+        amount = round(amount * self.rates[to_currency], 2)
+        print('{} {} = {} {}'.format(initial_amount, from_currency, amount, to_currency))
+
+
 def collecting_data_in_page(shared_list, base_url, page):
     url_list_page = base_url + "&page=" + str(page)
     new_req = requests.get(url=url_list_page)
@@ -169,6 +184,7 @@ def create_analyzed_data_for_salary_to_experience(area=159, word_to_find=None):
     new_col = df.loc[:, 'salary_from': 'salary_to']
     df['salary_mean'] = new_col.mean(axis=1)
     new_df = df.groupby('experience').salary_mean.mean()
+    new_df.fillna(0, inplace=True)
     analyzed_data_dict = new_df.to_dict()
     keys_dict = analyzed_data_dict.keys()
     to_send_data_list = []
@@ -199,6 +215,7 @@ def create_analyzed_data_for_salary_to_company(area=159, word_to_find=None):
     new_col = df.loc[:, 'salary_from': 'salary_to']
     df['salary_mean'] = new_col.mean(axis=1)
     new_df = df.groupby('employer').salary_mean.mean()
+    new_df.fillna(0, inplace=True)
     analyzed_data_dict = new_df.to_dict()
     clean_analyzed_data_dict = {k: analyzed_data_dict[k] for k in analyzed_data_dict if
                                 not isnan(analyzed_data_dict[k])}
