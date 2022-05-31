@@ -13,6 +13,7 @@ import csv
 import os.path as path
 import time
 import threading
+import ast
 
 from numpy import isnan
 
@@ -189,8 +190,7 @@ def create_analyzed_data_for_salary_to_experience(area=159, word_to_find=None):
     keys_dict = analyzed_data_dict.keys()
     to_send_data_list = []
     for key in keys_dict:
-        key = key.replace("\'", "\"")
-        key = json.loads(key)
+        key = ast.literal_eval(key)
         to_send_data_dict_2 = {"year": EXPERIENCE_DICTIONARY[key["id"]], "salary": int(analyzed_data_dict[str(key)])}
         to_send_data_list.append(to_send_data_dict_2)
 
@@ -222,11 +222,8 @@ def create_analyzed_data_for_salary_to_company(area=159, word_to_find=None):
     keys_dict = clean_analyzed_data_dict.keys()
     to_send_data_list = []
     for key in keys_dict:
-        json_key = key.replace("\'", "\"")
-        json_key = json_key.replace('True', 'true')
-        json_key = json_key.replace('False', 'false')
-        json_key = json_key.replace('None', '\"default\"')
-        json_key = json.loads(json_key)
+        json_key = key.replace('None', '\"default\"')
+        json_key = ast.literal_eval(json_key)
         to_send_data = {"company_name": json_key['name'], "salary": int(clean_analyzed_data_dict[str(key)])}
         to_send_data_list.append(to_send_data)
 
@@ -254,20 +251,18 @@ def search_vacancies_by_skill_sets(skill_sets, area=159, word_to_find=None):
             match_by_skill_sets = "{:.2f}".format(match_by_skill_sets)
 
         area_of_vacancy = row['area']
-        area_of_vacancy = area_of_vacancy.replace("\'", "\"")
-        area_of_vacancy = json.loads(area_of_vacancy)
+        area_of_vacancy = ast.literal_eval(area_of_vacancy)
 
         experience_of_vacancy = row['experience']
-        experience_of_vacancy = experience_of_vacancy.replace("\'", "\"")
-        experience_of_vacancy = json.loads(experience_of_vacancy)
+        experience_of_vacancy = ast.literal_eval(experience_of_vacancy)
 
         company_of_vacancy = row['employer']
-        company_of_vacancy = company_of_vacancy.replace("\'", "\"")
-        company_of_vacancy = company_of_vacancy.replace('True', 'true')
-        company_of_vacancy = company_of_vacancy.replace('False', 'false')
-        company_of_vacancy = company_of_vacancy.replace('None', '\"default\"')
+        company_of_vacancy = ast.literal_eval(company_of_vacancy)
+        print(company_of_vacancy)
+        if 'logo_urls' in company_of_vacancy and company_of_vacancy['logo_urls'] is None:
+            company_of_vacancy['logo_urls'] = 'default'
         # print("AAAA", company_of_vacancy)
-        company_of_vacancy = json.loads(company_of_vacancy)
+        # print(company_of_vacancy)
         company_of_vacancy_logo_url = "no_logo"
         if 'logo_urls' in company_of_vacancy and company_of_vacancy['logo_urls'] != 'default':
             company_of_vacancy_logo_url = company_of_vacancy['logo_urls']['original']
@@ -317,14 +312,11 @@ def top_10_skills(area=159, word_to_find=None):
     skills_occurrence = {}
     for index, row in df.iterrows():
         vacancy_skill_sets_row = row['key_skills']
-        vacancy_skill_sets_row = vacancy_skill_sets_row.replace("\'", "\"")
-        vacancy_skill_sets_row = json.loads(vacancy_skill_sets_row)
+        vacancy_skill_sets_row = ast.literal_eval(vacancy_skill_sets_row)
         if len(vacancy_skill_sets_row) == 0:
             pass
         else:
             for skill in vacancy_skill_sets_row:
-                # print(skill)
-                # print(type(skill))
                 if skill['name'] in skills_occurrence:
                     skills_occurrence[skill['name']] += 1
                 else:
